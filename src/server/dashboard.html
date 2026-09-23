@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CX Sentinel — Jev decision layer</title>
+<style>
+  /* Tokens lifted from CXM-Tool's own design-system.css so this looks like part
+     of the same product rather than a bolted-on admin page. */
+  :root{
+    --bg-primary:#0f172a; --bg-secondary:#1e293b; --bg-tertiary:#334155;
+    --accent:#6366f1; --accent-2:#818cf8;
+    --success:#10b981; --warning:#f59e0b; --danger:#ef4444; --info:#0ea5e9;
+    --text:#f8fafc; --text-2:#94a3b8; --text-3:#64748b;
+    --border:rgba(255,255,255,.08); --glass:rgba(255,255,255,.03);
+    --r:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg-primary);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent-2)}
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 22px 80px}
+  header{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  h1{font-size:22px;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin:34px 0 12px}
+  .sub{color:var(--text-2);font-size:13px;max-width:70ch}
+  .warn{margin:16px 0;padding:10px 14px;border-radius:var(--r);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fcd34d;font-size:13px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-top:18px}
+  .tile{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+  .tile .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3)}
+  .tile .v{font-size:24px;font-weight:700;margin-top:4px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .tile .n{font-size:11px;color:var(--text-3);margin-top:3px}
+  .scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--glass)}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+  .p1{background:rgba(239,68,68,.14);color:#fca5a5;border:1px solid rgba(239,68,68,.28)}
+  .p2{background:rgba(245,158,11,.14);color:#fcd34d;border:1px solid rgba(245,158,11,.28)}
+  .p3{background:rgba(14,165,233,.12);color:#7dd3fc;border:1px solid rgba(14,165,233,.25)}
+  .p4{background:rgba(148,163,184,.1);color:#cbd5e1;border:1px solid rgba(148,163,184,.2)}
+  .ok{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+  .hold{background:rgba(239,68,68,.14);color:#fca5a5;border:1px solid rgba(239,68,68,.28)}
+  .edit{background:rgba(245,158,11,.14);color:#fcd34d;border:1px solid rgba(245,158,11,.28)}
+  .muted{color:var(--text-2)}
+  .tiny{font-size:11.5px;color:var(--text-3)}
+  .flags{margin-top:3px}
+  .flag{display:inline-block;margin:2px 4px 0 0;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(99,102,241,.14);color:#c7d2fe;border:1px solid rgba(99,102,241,.25)}
+  /* The confidence bar. The number people should read, drawn so they do. */
+  .bar{position:relative;height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden;min-width:56px;margin-top:5px}
+  .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:3px}
+  .bar.low i{background:var(--warning)}
+  .bar.bad i{background:var(--danger)}
+  .thresh{position:absolute;top:-2px;bottom:-2px;width:1.5px;background:rgba(255,255,255,.55)}
+  button{font:inherit;font-weight:600;color:#fff;background:var(--accent);border:none;border-radius:10px;padding:8px 16px;cursor:pointer}
+  button:hover{background:var(--accent-2)}
+  button[disabled]{opacity:.5;cursor:default}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+  .card{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+  .card h3{font-size:14px;font-weight:600;margin-bottom:2px}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .kv:last-child{border-bottom:none}
+  .kv span:first-child{color:var(--text-3)}
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>CX Sentinel</h1>
+      <p class="sub">Every inbound message, every account and every outgoing draft judged by Jev — typed decisions with a confidence your code can branch on, not prose somebody has to read.</p>
+    </div>
+    <button id="rerun">Re-run</button>
+  </header>
+
+  <div id="banner"></div>
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Triage — inbound signals, highest priority first</h2>
+  <div class="scroll"><table id="signals"><thead><tr>
+    <th>Pri</th><th>Account</th><th>Signal</th><th>Sentiment</th>
+    <th class="num">Urgency</th><th class="num">Effort</th><th>Queue</th><th class="num">Confidence</th>
+  </tr></thead><tbody></tbody></table></div>
+
+  <h2>Accounts — health, renewal risk, the play to run</h2>
+  <div class="cols" id="accounts"></div>
+
+  <h2>Outbound QA — drafts judged before a customer reads them</h2>
+  <div class="scroll"><table id="replies"><thead><tr>
+    <th>Verdict</th><th>Answering</th><th>Readiness</th><th class="num">Supported</th>
+    <th class="num">Commits</th><th class="num">Clarity</th><th>Blocked by</th>
+  </tr></thead><tbody></tbody></table></div>
+
+  <h2>Ledger</h2>
+  <div class="cols" id="ledger"></div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script type="module">
+const $ = (s) => document.querySelector(s);
+const pct = (n) => n == null ? '—' : `${Math.round(n * 100)}%`;
+const usd = (n) => n === 0 ? '$0' : n < 0.01 ? `$${n.toFixed(6)}` : n < 1 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function confBar(conf, threshold) {
+  const c = conf ?? 0, t = threshold ?? 0.6;
+  const cls = c >= t ? '' : c >= t - 0.15 ? 'low' : 'bad';
+  return `<div class="bar ${cls}" title="confidence ${c.toFixed(2)}, threshold ${t}">
+    <i style="width:${Math.round(c * 100)}%"></i><span class="thresh" style="left:${Math.round(t * 100)}%"></span></div>`;
+}
+
+async function load(rerun = false) {
+  $('#rerun').disabled = true;
+  $('#rerun').textContent = 'Running…';
+  const res = await fetch(rerun ? '/api/jev/run' : '/api/jev/dashboard', { method: rerun ? 'POST' : 'GET', headers: { 'content-type': 'application/json' }, body: rerun ? '{}' : undefined });
+  const d = await res.json();
+  render(d);
+  $('#rerun').disabled = false;
+  $('#rerun').textContent = 'Re-run';
+}
+
+function render(d) {
+  const L = d.ledger, P = d.portfolio;
+
+  $('#banner').innerHTML = d.simulated
+    ? `<div class="warn"><strong>Offline simulator.</strong> No Jev call was made. The request shapes, the confidence gate, the ledger and this page are real; the verdicts are lexical, not intelligent. Set <code>JEV_PROVIDER</code> and <code>JEV_API_KEY</code> to run it against the model.</div>`
+    : '';
+
+  $('#tiles').innerHTML = [
+    ['Signals judged', P.signals, `${d.accounts.length} accounts`],
+    ['Typed decisions', L.decisions.toLocaleString(), `${L.decisionsPerCall} per call`],
+    ['Cost', usd(L.cost.modelledUsd), `${usd(L.cost.perDecisionUsd)} per decision`],
+    ['Median latency', `${L.latency.p50Ms} ms`, `p90 ${L.latency.p90Ms} ms`],
+    ['Autonomy rate', pct(L.gate.meanAutonomyRate), `${L.gate.totalUncertain} for review`],
+    ['Value at risk', usd(P.valueAtRiskUsd), `${P.accountsAtRisk.length} accounts`],
+  ].map(([k, v, n]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${esc(n)}</div></div>`).join('');
+
+  const FLAGS = [
+    ['churn_signal', 'churn'], ['expansion_signal', 'expansion'], ['advocacy_signal', 'advocacy'],
+    ['blocked_now', 'blocked'], ['exec_escalation', 'exec'], ['contractual_risk', 'contractual'],
+    ['security_or_privacy', 'security'], ['sla_breach_risk', 'SLA risk'], ['onboarding_blocker', 'onboarding'],
+    ['usage_decline', 'usage falling'], ['feature_request', 'feature req'], ['mentions_competitor', 'competitor'],
+  ];
+
+  $('#signals tbody').innerHTML = [...d.signals]
+    .sort((a, b) => b.priority.score - a.priority.score)
+    .map((s) => {
+      const a = s.answers;
+      const flags = FLAGS.filter(([id]) => (a[id]?.noul ?? 0) >= 0.7).map(([, label]) => `<span class="flag">${label}</span>`).join('');
+      return `<tr>
+        <td><span class="pill ${s.priority.band.toLowerCase()}">${s.priority.band}</span><div class="tiny num" style="text-align:left">${s.priority.score}</div></td>
+        <td>${esc(s.account?.name ?? '—')}<div class="tiny">${esc(s.signal.channel)}</div></td>
+        <td>${esc(s.signal.subject ?? s.signal.id)}<div class="tiny">${esc(s.signal.body.slice(0, 96))}…</div>${flags ? `<div class="flags">${flags}</div>` : ''}</td>
+        <td>${esc(a.sentiment?.choice ?? '—')}${confBar(a.sentiment?.confidence, 0.5)}</td>
+        <td class="num">${a.urgency?.score ?? '—'}<span class="tiny">/4</span></td>
+        <td class="num">${a.effort?.score ?? '—'}<span class="tiny">/4</span></td>
+        <td class="muted">${esc(s.queue)}</td>
+        <td class="num">${pct(s.autonomyRate)}<div class="tiny">${s.escalations.length ? `${s.escalations.length} escalated` : `${s.uncertain.length} unsure`}</div></td>
+      </tr>`;
+    }).join('');
+
+  $('#accounts').innerHTML = [...d.accounts]
+    .sort((x, y) => (y.answers.renewal_risk?.score ?? 0) - (x.answers.renewal_risk?.score ?? 0))
+    .map((a) => `<div class="card">
+      <h3>${esc(a.account.name)} <span class="pill ${gradeClass(a.derived.healthGrade)}">${esc(a.derived.healthGrade)}</span></h3>
+      <div class="tiny" style="margin-bottom:8px">recorded in CXM-Tool as “${esc(a.account.health)}” · ${esc(a.account.value)} · renews ${esc(a.account.renewals)}</div>
+      <div class="kv"><span>Renewal risk</span><strong>${a.answers.renewal_risk?.score ?? '—'}/4</strong></div>
+      <div class="kv"><span>Value at risk</span><strong>${usd(a.derived.valueAtRisk ?? 0)}</strong></div>
+      <div class="kv"><span>Primary driver</span><strong>${esc(a.answers.primary_risk_driver?.choice ?? '—')}</strong></div>
+      <div class="kv"><span>Outlook</span><strong>${esc(a.answers.outlook?.choice ?? '—')}</strong></div>
+      <div class="kv"><span>Value realised</span><strong>${a.answers.value_realisation?.score ?? '—'}/4</strong></div>
+      <div class="kv"><span>Recommended play</span><strong>${esc(a.answers.recommended_play?.choice ?? '—')}</strong></div>
+      ${confBar(a.answers.recommended_play?.confidence, 0.6)}
+      <div class="tiny" style="margin-top:8px">${a.evidence.signalsIncluded} signals of evidence${a.evidence.signalsDropped ? `, ${a.evidence.signalsDropped} dropped for budget` : ''}${a.derived.thinEvidence ? ' · <strong style="color:#fcd34d">thin evidence</strong>' : ''} · ${a.latencyMs} ms</div>
+      ${a.escalations.length ? `<div class="tiny" style="color:#fcd34d;margin-top:4px">unsure on: ${a.escalations.map(esc).join(', ')}</div>` : ''}
+    </div>`).join('');
+
+  $('#replies tbody').innerHTML = d.replies.map((r) => {
+    const cls = { send: 'ok', send_after_edit: 'edit', hold_for_human: 'hold' }[r.decision];
+    const label = { send: 'send', send_after_edit: 'edit first', hold_for_human: 'hold' }[r.decision];
+    return `<tr>
+      <td><span class="pill ${cls}">${label}</span></td>
+      <td>${esc(r.signalId)}</td>
+      <td class="muted">${esc(r.readiness ?? '—')}</td>
+      <td class="num">${pct(r.answers.factually_supported?.noul)}</td>
+      <td class="num">${pct(r.answers.makes_a_commitment?.noul)}</td>
+      <td class="num">${r.clarity ?? '—'}<span class="tiny">/4</span></td>
+      <td class="tiny">${r.blockers.length ? esc(r.blockers.join(', ')) : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  $('#ledger').innerHTML = `
+    <div class="card"><h3>This run</h3>
+      <div class="kv"><span>Calls</span><strong>${L.calls}</strong></div>
+      <div class="kv"><span>Typed decisions</span><strong>${L.decisions.toLocaleString()}</strong></div>
+      <div class="kv"><span>Input tokens</span><strong>${L.inputTokens.toLocaleString()}</strong></div>
+      <div class="kv"><span>Cost</span><strong>${usd(L.cost.modelledUsd)}</strong></div>
+      <div class="kv"><span>Decisions per dollar</span><strong>${L.cost.decisionsPerDollar?.toLocaleString() ?? '—'}</strong></div>
+      <div class="kv"><span>Wall clock</span><strong>${(d.wallClockMs / 1000).toFixed(1)} s</strong></div>
+    </div>
+    <div class="card"><h3>Against ${esc(L.comparedWith.baseline)}</h3>
+      <div class="kv"><span>Same ${L.calls} cases would cost</span><strong>${usd(L.comparedWith.baselineCostUsd)}</strong></div>
+      <div class="kv"><span>and take</span><strong>${L.comparedWith.baselineSeconds} s</strong></div>
+      <div class="kv"><span>Cheaper by</span><strong>~${L.comparedWith.cheaperBy}×</strong></div>
+      <p class="tiny" style="margin-top:8px">${esc(L.comparedWith.note)}</p>
+    </div>
+    <div class="card"><h3>The gate</h3>
+      <div class="kv"><span>Cleared the bar</span><strong>${pct(L.gate.meanAutonomyRate)}</strong></div>
+      <div class="kv"><span>Sent for review</span><strong>${L.gate.totalUncertain}</strong></div>
+      <div class="kv"><span>Escalated</span><strong>${L.gate.totalEscalations}</strong></div>
+      <p class="tiny" style="margin-top:8px">Escalated means the answer was below its bar <em>and</em> the decision was consequential enough to go to a larger model or a named person rather than a queue.</p>
+    </div>
+    <div class="card"><h3>Root causes across the portfolio</h3>
+      ${P.rootCauseRanking.length ? P.rootCauseRanking.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><strong>${v}</strong></div>`).join('') : '<p class="tiny">Nothing recorded.</p>'}
+    </div>`;
+
+  $('#foot').innerHTML = `Provider <strong>${esc(d.provider)}</strong> · model decides, code acts · Jev is TypeSafe AI's System One model, released 15 September 2026. Pricing and limits quoted here are TypeSafe's published figures. This project is not affiliated with TypeSafe AI.`;
+}
+
+function gradeClass(g) {
+  return { Critical: 'p1', Poor: 'p2', Neutral: 'p3', Good: 'ok', Excellent: 'ok' }[g] ?? 'p4';
+}
+
+$('#rerun').addEventListener('click', () => load(true));
+load().catch((e) => { $('#banner').innerHTML = `<div class="warn">Could not load: ${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

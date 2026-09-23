@@ -1,0 +1,24 @@
+{
+  "name": "enhance-cx-with-jev",
+  "version": "1.0.0",
+  "description": "CX Sentinel — a Jev decision layer for Customer Success. Every ticket, email, survey and account judged with typed decisions instead of prose.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "main": "src/engine/index.js",
+  "exports": {
+    ".": "./src/engine/index.js",
+    "./rubrics": "./src/engine/rubrics.js",
+    "./policy": "./src/engine/policy.js",
+    "./express": "./src/server/router.js"
+  },
+  "scripts": {
+    "demo": "node src/cli/demo.js",
+    "serve": "node src/server/standalone.js",
+    "test": "node --test test/*.test.js",
+    "calibrate": "node src/cli/calibrate.js"
+  },
+  "keywords": ["jev", "typesafe-ai", "system-one", "customer-experience", "customer-success", "churn", "triage", "cx"],
+  "dependencies": {},
+  "devDependencies": {}
+}
