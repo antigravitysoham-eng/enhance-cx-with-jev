@@ -103,18 +103,42 @@ confidence tells you which you have.
 
 ## What a run looks like
 
-30 signals, 6 accounts, 5 draft replies, on the offline simulator:
+30 signals, 6 accounts, 5 draft replies, **against the live model**
+(`JEV_PROVIDER=direct`), 23 September 2026:
 
 ```
   calls                41   (794 typed decisions, 19.4 per call)
-  cost                 $0.004521          ← modelled at Jev list price
-  per decision         $0.000006          (175,643 decisions per dollar)
-  latency              p50 3 ms   p90 5 ms
-  autonomy rate        58.8% of decisions cleared their confidence bar
-  sent for review      294   escalated: 28
+  input tokens         116,112
+  cost                 $0.004877          ← billed, from usage.input_tokens
+  per decision         $0.000006          (162,815 decisions per dollar)
+  latency              p50 419 ms   p90 1214 ms   max 3129 ms
+  wall clock           5.7 s
+  autonomy rate        82.2% of decisions cleared their confidence bar
+  sent for review      94   escalated: 38
 
-  against sonnet-5: ~$4.81 and ~3202s for the same 41 cases → ~1,065× cheaper
+  against sonnet-5: ~$4.81 and ~3202s for the same 41 cases → ~987× cheaper
 ```
+
+The identical run on the **offline simulator**, for comparison:
+
+```
+  cost                 $0.004521          ← modelled at list price, never billed
+  latency              p50 3 ms   p90 5 ms      ← a local function call, not a model
+  autonomy rate        58.8%
+  sent for review      294   escalated: 28
+```
+
+That comparison is worth reading twice, because it is the honest account of what the
+simulator is and is not:
+
+- Its **cost estimate landed within 8%** of the real bill. Cost is a function of token
+  count, and counting tokens is arithmetic the simulator can do exactly as well.
+- Its **latency is meaningless**. 3 ms is a local function call. The real p50 is 419 ms,
+  two orders of magnitude out.
+- Its **autonomy rate was 23 points pessimistic** — 58.8% against the model's 82.2%. The
+  lexical scorer is much less sure of itself than Jev is, so it pushed 294 decisions to
+  human review where the model pushed 94. If you size a review queue off the simulator you
+  will over-staff it threefold.
 
 The baseline row uses TypeSafe's published per-case workflow-eval figures. It is an
 order-of-magnitude estimate against those numbers, not a benchmark of this workload, and the
