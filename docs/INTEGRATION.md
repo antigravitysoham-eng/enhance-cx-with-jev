@@ -24,7 +24,7 @@ imported, so it cannot drag a second copy into an app that already has one.
 `CXM-Tool/server/server.js`, after `app.use(express.json())`:
 
 ```js
-import { jevRouter } from '../../Enhance-CX-with-Jev/src/server/router.js';
+import { jevRouter } from '../../enhance-cx-with-jev/src/server/router.js';
 
 // The decision layer. Provider comes from the environment; with no key set it
 // runs the offline simulator and says so in every response.
